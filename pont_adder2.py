@@ -9,23 +9,39 @@ CUTTERS_DB_ID = "e23876f7f17b4fcbac6352b63303c7c8"
 HEADERS = {
     "Authorization": f"Bearer {NOTION_TOKEN}",
     "Notion-Version": "2022-06-28",
-    "Content-Type": "application/json"
+    "Content-Type":  "application/json"
 }
 
 # ----------------------------------------------------
-#  Helper: név átalakítás
+#  Speciális névkezelés
 # ----------------------------------------------------
-def normalize_main_name(name_raw: str) -> str:
+SPECIAL_NAME_MAPPING = {
+    "diána dombi": "Dombi Dia",
+    "dombi diána": "Dombi Dia"
+}
+
+# ----------------------------------------------------
+#  Helper:  név átalakítás
+# ----------------------------------------------------
+def normalize_main_name(name_raw:  str) -> str:
     """
-    MAIN DB: @John Doe  →  John Doe  → Doe John (surname first)
+    MAIN DB:  @John Doe  →  John Doe  → Doe John (surname first)
+    Speciális esetek: mapping alapján
     """
     if not name_raw:
         return ""
 
-    if name_raw.startswith("@"):
+    if name_raw. startswith("@"):
         name_raw = name_raw[1:]
 
-    parts = name_raw.strip().split()
+    name_clean = name_raw.strip()
+    
+    # Speciális nevek ellenőrzése
+    name_lower = name_clean.lower()
+    if name_lower in SPECIAL_NAME_MAPPING:
+        return SPECIAL_NAME_MAPPING[name_lower]
+
+    parts = name_clean.split()
 
     if len(parts) == 1:
         return parts[0]
@@ -44,18 +60,18 @@ def load_cutters_lookup():
     cursor = None
     has_more = True
 
-    while has_more:
+    while has_more: 
         payload = {}
         if cursor:
             payload["start_cursor"] = cursor
 
         res = requests.post(url, headers=HEADERS, json=payload)
-        data = res.json()
+        data = res. json()
 
-        for row in data.get("results", []):
+        for row in data. get("results", []):
             try:
-                full_name = row["properties"]["Full Name"]["title"][0]["plain_text"].strip()
-                lookup[full_name.lower()] = row["id"]
+                full_name = row["properties"]["Full Name"]["title"][0]["plain_text"]. strip()
+                lookup[full_name. lower()] = row["id"]
             except:
                 continue
 
@@ -71,7 +87,7 @@ def load_cutters_lookup():
 def load_main_entries_without_relation():
     """
     Csak olyan MAIN DB sorokat ad vissza,
-    ahol a 'Vágó' relation jelenleg ÜRES.
+    ahol a 'Vágó' relation jelenleg ÜRES. 
     """
     url = f"https://api.notion.com/v1/databases/{MAIN_DB_ID}/query"
 
@@ -87,7 +103,7 @@ def load_main_entries_without_relation():
             }
         }
 
-        if cursor:
+        if cursor: 
             payload["start_cursor"] = cursor
 
         res = requests.post(url, headers=HEADERS, json=payload)
@@ -100,7 +116,7 @@ def load_main_entries_without_relation():
         all_rows.extend(data["results"])
 
         cursor = data.get("next_cursor")
-        has_more = data.get("has_more", False)
+        has_more = data. get("has_more", False)
 
     return all_rows
 
@@ -117,7 +133,7 @@ def update_relation(page_id, cutter_page_id):
             }
         }
     }
-    res = requests.patch(url, headers=HEADERS, json=payload)
+    res = requests. patch(url, headers=HEADERS, json=payload)
     return res.status_code == 200
 
 
@@ -139,9 +155,9 @@ def main():
     for row in main_entries:
         page_id = row["id"]
 
-        try:
+        try: 
             raw_name = row["properties"]["Name"]["title"][0]["plain_text"]
-        except:
+        except: 
             print(f"⚠️ Nincs Name mező: {page_id}")
             continue
 
