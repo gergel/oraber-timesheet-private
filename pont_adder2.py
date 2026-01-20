@@ -13,33 +13,24 @@ HEADERS = {
 }
 
 # ----------------------------------------------------
-#  Speciális névkezelés
-# ----------------------------------------------------
-SPECIAL_NAME_MAPPING = {
-    "diána dombi": "Dombi Dia",
-    "dombi diána": "Dombi Dia"
-}
-
-# ----------------------------------------------------
 #  Helper:  név átalakítás
 # ----------------------------------------------------
 def normalize_main_name(name_raw:  str) -> str:
     """
     MAIN DB:  @John Doe  →  John Doe  → Doe John (surname first)
-    Speciális esetek: mapping alapján
+    SPECIÁLIS:  Diána Dombi → Dombi Dia
     """
     if not name_raw:
         return ""
 
-    if name_raw. startswith("@"):
+    if name_raw.startswith("@"):
         name_raw = name_raw[1:]
 
     name_clean = name_raw.strip()
     
-    # Speciális nevek ellenőrzése
-    name_lower = name_clean.lower()
-    if name_lower in SPECIAL_NAME_MAPPING:
-        return SPECIAL_NAME_MAPPING[name_lower]
+    # SPECIÁLIS ESET: Diána Dombi → Dombi Dia
+    if "diána" in name_clean.lower() and "dombi" in name_clean.lower():
+        return "Dombi Dia"
 
     parts = name_clean.split()
 
@@ -60,19 +51,19 @@ def load_cutters_lookup():
     cursor = None
     has_more = True
 
-    while has_more: 
+    while has_more:
         payload = {}
         if cursor:
             payload["start_cursor"] = cursor
 
         res = requests.post(url, headers=HEADERS, json=payload)
-        data = res. json()
+        data = res.json()
 
-        for row in data. get("results", []):
+        for row in data.get("results", []):
             try:
                 full_name = row["properties"]["Full Name"]["title"][0]["plain_text"]. strip()
                 lookup[full_name. lower()] = row["id"]
-            except:
+            except: 
                 continue
 
         cursor = data.get("next_cursor")
@@ -82,7 +73,7 @@ def load_cutters_lookup():
 
 
 # ----------------------------------------------------
-# MAIN DB lekérése – csak azok ahol még nincs kapcsolat!
+# MAIN DB lekérése – csak azok ahol még nincs kapcsolat! 
 # ----------------------------------------------------
 def load_main_entries_without_relation():
     """
@@ -103,7 +94,7 @@ def load_main_entries_without_relation():
             }
         }
 
-        if cursor: 
+        if cursor:
             payload["start_cursor"] = cursor
 
         res = requests.post(url, headers=HEADERS, json=payload)
@@ -116,7 +107,7 @@ def load_main_entries_without_relation():
         all_rows.extend(data["results"])
 
         cursor = data.get("next_cursor")
-        has_more = data. get("has_more", False)
+        has_more = data.get("has_more", False)
 
     return all_rows
 
@@ -133,7 +124,7 @@ def update_relation(page_id, cutter_page_id):
             }
         }
     }
-    res = requests. patch(url, headers=HEADERS, json=payload)
+    res = requests.patch(url, headers=HEADERS, json=payload)
     return res.status_code == 200
 
 
@@ -155,10 +146,10 @@ def main():
     for row in main_entries:
         page_id = row["id"]
 
-        try: 
+        try:
             raw_name = row["properties"]["Name"]["title"][0]["plain_text"]
-        except: 
-            print(f"⚠️ Nincs Name mező: {page_id}")
+        except:
+            print(f"⚠️ Nincs Name mező:  {page_id}")
             continue
 
         normalized = normalize_main_name(raw_name)
@@ -170,12 +161,12 @@ def main():
                 linked += 1
                 print(f"✅ {raw_name}  →  {normalized} – kapcsolat frissítve!")
             else:
-                print(f"❌ Nem sikerült frissíteni: {raw_name}")
+                print(f"❌ Nem sikerült frissíteni:  {raw_name}")
         else:
             missing += 1
             print(f"❗ Nincs egyezés: {raw_name}  →  {normalized}")
 
-    print(f"\n🔚 Kész! Új kapcsolatok: {linked}, nem talált egyezés: {missing}\n")
+    print(f"\n🔚 Kész!  Új kapcsolatok: {linked}, nem talált egyezés: {missing}\n")
 
 
 # ----------------------------------------------------
